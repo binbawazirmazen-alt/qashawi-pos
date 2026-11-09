@@ -1781,3 +1781,13 @@ dialog::backdrop {
     background-color: rgb(75 85 99 / var(--tw-bg-opacity));
   }
 }
+/* إخفاء شارة Netlify نهائياً */
+[data-netlify-deploy-id],
+.netlify-drawer,
+#netlify-drawer,
+div[class*="netlify"],
+iframe[src*="netlify"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
