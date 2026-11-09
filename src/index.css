@@ -1780,3 +1780,8 @@ dialog::backdrop {
     --tw-bg-opacity: 1;
     background-color: rgb(75 85 99 / var(--tw-bg-opacity));
   }
+[data-netlify-deploy-id],
+.netlify-drawer,
+#netlify-drawer {
+  display: none !important;
+}
