@@ -16,6 +16,19 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="قشعاوي POS" />
+    <style>
+  [data-netlify-deploy-id],
+  netlify-drawer,
+  #netlify-drawer,
+  .netlify-drawer,
+  [class*="netlify-drawer"],
+  div[style*="z-index: 2147483647"] {
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+  }
+</style>
   </head>
   <body class="bg-slate-100 antialiased selection:bg-blue-600 selection:text-white">
     <div id="root"></div>
