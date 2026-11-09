@@ -1,0 +1,119 @@
+import React from 'react';
+import THREE from 'three';
+import { useEffect, useRef } from 'react';
+// import reactLogo from './assets/react.svg';
+// import viteLogo from '/vite.svg';
+// import threeEntryPoint from 'threejs/threeEntryPoint'
+import './App.css';
+
+class ThreeContainer extends React.Component {
+  refContainer = useRef(null);
+
+  componentDidMount() {
+    useEffect(() => {
+      // === THREE.JS CODE START ===
+      var scene = new THREE.Scene();
+      var camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
+      var renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      // document.body.appendChild( renderer.domElement );
+      // use ref as a mount point of the Three.js scene instead of the document.body
+
+      this.refContainer.current &&
+        this.refContainer.current.appendChild(renderer.domElement);
+
+      var geometry = new THREE.BoxGeometry(1, 1, 1);
+      var material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+      var cube = new THREE.Mesh(geometry, material);
+      scene.add(cube);
+      camera.position.z = 5;
+      var animate = function () {
+        requestAnimationFrame(animate);
+        cube.rotation.x += 0.01;
+        cube.rotation.y += 0.01;
+        renderer.render(scene, camera);
+      };
+      animate();
+    }, []);
+  }
+  render() {
+    return <div ref={this.refContainer} />;
+  }
+}
+
+export default ThreeContainer;
+
+// export class Car extends React.Component {
+//   constructor(props: any) {
+//     super(props);
+//     this.state = {
+//       brand: 'Tesla',
+//       model: 'Cybertruck',
+//       color: 'rgb(0, 10, 100)',
+//       year: 2024,
+//     };
+//     console.log('props color:', props.color);
+//   }
+//   randomColor = () => {
+//     return (
+//       'rgb(' +
+//       Math.floor(Math.random() * 256) +
+//       ',' +
+//       Math.floor(Math.random() * 256) +
+//       ',' +
+//       Math.floor(Math.random() * 256) +
+//       ')'
+//     );
+//   };
+//   changeColor = () => {
+//     this.setState({ color: this.randomColor() });
+//   };
+//   render() {
+//     return (
+//       <>
+//         <h2 style={{ color: this.state.color }}>
+//           My car is a {this.state.brand} {this.state.color} {this.state.model}{' '}
+//           in {this.state.year}
+//         </h2>
+//         <button type="button" onClick={this.changeColor}>
+//           Change Color
+//         </button>
+//       </>
+//     );
+//   }
+// }
+
+// function App() {
+//   const [count, setCount] = useState(0)
+
+//   return (
+//     <>
+//       <div>
+//         <a href="https://vitejs.dev" target="_blank">
+//           <img src={viteLogo} className="logo" alt="Vite logo" />
+//         </a>
+//         <a href="https://react.dev" target="_blank">
+//           <img src={reactLogo} className="logo react" alt="React logo" />
+//         </a>
+//       </div>
+//       <h1>Vite + React</h1>
+//       <div className="card">
+//         <button onClick={() => setCount((count) => count + 1)}>
+//           count is {count}
+//         </button>
+//         <p>
+//           Edit <code>src/App.tsx</code> and save to test HMR
+//         </p>
+//       </div>
+//       <p className="read-the-docs">
+//         Click on the Vite and React logos to learn more
+//       </p>
+//     </>
+//   )
+// }
+
