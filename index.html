@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>قشعاوي للاتصالات والإكسسوارات الذكية</title>
     
-    <!-- مكتبة التنسيق والألوان السريعة (Tailwind CSS) لعودة الشكل الطبيعي -->
+    <!-- مكتبة التنسيق والألوان السريعة (Tailwind CSS) -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- إعدادات تطبيق الويب PWA -->
@@ -16,23 +16,58 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="قشعاوي POS" />
+
+    <!-- إخفاء شارة Netlify عبر التنسيقات -->
     <style>
-  [data-netlify-deploy-id],
-  netlify-drawer,
-  #netlify-drawer,
-  .netlify-drawer,
-  [class*="netlify-drawer"],
-  div[style*="z-index: 2147483647"] {
-    display: none !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    visibility: hidden !important;
-  }
-</style>
+      [data-netlify-deploy-id],
+      netlify-drawer,
+      #netlify-drawer,
+      .netlify-drawer,
+      [class*="netlify"],
+      [id*="netlify"],
+      div[style*="z-index: 2147483647"],
+      div:has(> a[href*="netlify.com"]),
+      iframe[src*="netlify"] {
+        display: none !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        width: 0 !important;
+      }
+    </style>
   </head>
   <body class="bg-slate-100 antialiased selection:bg-blue-600 selection:text-white">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- إزالة شارة Netlify برمجياً من جذور الصفحة فور ظهورها -->
+    <script>
+      const removeNetlifyBadge = () => {
+        const selectors = [
+          'netlify-drawer',
+          '#netlify-drawer',
+          '.netlify-drawer',
+          '[data-netlify-deploy-id]',
+          'div[style*="z-index: 2147483647"]'
+        ];
+        selectors.forEach(selector => {
+          document.querySelectorAll(selector).forEach(el => el.remove());
+        });
+
+        // فحص أي رابط يحتوي على Netlify وحذف العنصر الحاوي له
+        document.querySelectorAll('a[href*="netlify.com"]').forEach(link => {
+          const parent = link.closest('div');
+          if (parent) parent.remove();
+        });
+      };
+
+      // تشغيل الحذف عند الفتح وبشكل مستمر مع أي تغيير في الشاشة
+      window.addEventListener('DOMContentLoaded', removeNetlifyBadge);
+      window.addEventListener('load', removeNetlifyBadge);
+      const badgeObserver = new MutationObserver(removeNetlifyBadge);
+      badgeObserver.observe(document.documentElement, { childList: true, subtree: true });
+    </script>
 
     <!-- تشغيل عامل الخدمة للعمل بدون إنترنت -->
     <script>
