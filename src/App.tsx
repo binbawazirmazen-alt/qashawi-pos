@@ -68,7 +68,6 @@ export function BawazirInvoiceFooter() {
   );
 }
 
-// --- الواجهات البرمجية ---
 export interface Device {
   id: string;
   name: string;
@@ -128,10 +127,14 @@ export default function App() {
   const [pinInput, setPinInput] = useState('');
   const [showPinModal, setShowPinModal] = useState(false);
 
+  // نوافذ تغيير رمز PIN
+  const [showChangePinModal, setShowChangePinModal] = useState(false);
+  const [currentPinInput, setCurrentPinInput] = useState('');
+  const [newPinInput, setNewPinInput] = useState('');
+  const [confirmNewPinInput, setConfirmNewPinInput] = useState('');
+
   // التبويبات
   const [activeTab, setActiveTab] = useState<'pos' | 'sales' | 'debts' | 'devices' | 'categories' | 'expenses' | 'reports' | 'forecast'>('pos');
-
-  // فلترة تقارير الأرباح
   const [reportFilter, setReportFilter] = useState<'today' | 'this_month' | 'all'>('this_month');
 
   // الأقسام والمخزون
@@ -161,7 +164,7 @@ export default function App() {
     localStorage.setItem('qash_devices', JSON.stringify(devices));
   }, [devices]);
 
-  // إدارة الأصناف (إضافة وتعديل)
+  // إدارة الأصناف
   const [isDeviceModalOpen, setIsDeviceModalOpen] = useState(false);
   const [editingDevice, setEditingDevice] = useState<Device | null>(null);
   const [devName, setDevName] = useState('');
@@ -202,7 +205,7 @@ export default function App() {
   const [expenseCategory, setExpenseCategory] = useState('نثريات وتغذية');
   const [editingExpense, setEditingExpense] = useState<ExpenseRecord | null>(null);
 
-  // المزامنة السحابية للعمليات المعلقة
+  // مزامنة البيانات
   const syncPendingData = async () => {
     const queue = JSON.parse(localStorage.getItem('qash_pending_sync') || '[]');
     if (queue.length === 0 || isSyncing) return;
@@ -281,7 +284,7 @@ export default function App() {
   const subTotalAmount = useMemo(() => cart.reduce((sum, i) => sum + (i.salePrice * i.quantity), 0), [cart]);
   const finalTotalAmount = Math.max(0, subTotalAmount - discountAmount);
 
-  // إتمام البيع مع دعم الديون
+  // إتمام البيع
   const handleInitiateCheckout = () => {
     if (cart.length === 0) return;
     if (selectedPaymentMethod === 'آجل (دين)' && !debtCustomerName.trim()) {
@@ -328,7 +331,6 @@ export default function App() {
     setSalesHistory(updated);
     localStorage.setItem('qash_sales', JSON.stringify(updated));
 
-    // مزامنة سحابية
     const payload = {
       id: pendingSaleToFinalize.id,
       items: pendingSaleToFinalize.items,
@@ -373,7 +375,7 @@ export default function App() {
     }
   };
 
-  // حذف فاتورة مبيعات مع إرجاع الكميات
+  // حذف فاتورة مبيعات
   const handleDeleteSale = (saleId: string) => {
     if (confirm('هل أنت متأكد من حذف هذه الفاتورة؟ سيتم إرجاع جميع الأصناف إلى المخزن تلقائياً.')) {
       const saleToDelete = salesHistory.find(s => s.id === saleId);
@@ -397,7 +399,32 @@ export default function App() {
     }
   };
 
-  // إضافة أو تعديل صنف
+  // تغيير رمز PIN الخاص بالمدير
+  const handleChangePin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (currentPinInput !== adminPin) {
+      alert('رمز PIN الحالي غير صحيح!');
+      return;
+    }
+    if (!newPinInput.trim() || newPinInput.length < 4) {
+      alert('الرمز الجديد يجب أن يتكون من 4 أرقام على الأقل!');
+      return;
+    }
+    if (newPinInput !== confirmNewPinInput) {
+      alert('تأكيد الرمز الجديد غير متطابق!');
+      return;
+    }
+
+    setAdminPin(newPinInput);
+    localStorage.setItem('qash_admin_pin', newPinInput);
+    alert('تم تغيير رمز PIN للمدير بنجاح! احفظ الرمز الجديد جيداً.');
+    setShowChangePinModal(false);
+    setCurrentPinInput('');
+    setNewPinInput('');
+    setConfirmNewPinInput('');
+  };
+
+  // إضافة وتعديل صنف
   const handleOpenAddDevice = () => {
     setEditingDevice(null);
     setDevName('');
@@ -469,7 +496,7 @@ export default function App() {
     }
   };
 
-  // إدارة الأقسام
+  // إضافة وحذف الأقسام
   const handleAddCategory = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = newCategoryName.trim();
@@ -490,7 +517,7 @@ export default function App() {
     }
   };
 
-  // إدارة الخرج والمصروفات
+  // إدارة الخرج
   const handleSaveExpense = (e: React.FormEvent) => {
     e.preventDefault();
     const amountNum = Number(expenseAmount);
@@ -549,7 +576,7 @@ export default function App() {
     }
   };
 
-  // فلترة تقارير الأرباح
+  // الحسابات والتقارير
   const currentMonth = new Date().toISOString().slice(0, 7);
   const todayDate = new Date().toISOString().split('T')[0];
 
@@ -570,7 +597,6 @@ export default function App() {
   const reportTotalExpenses = filteredExpensesForReports.reduce((sum, e) => sum + e.amount, 0);
   const reportNetCleanProfit = reportTotalProfit - reportTotalExpenses;
 
-  // خوارزمية التنبؤ بالمبيعات
   const daysInCurrentMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
   const currentDayNumber = new Date().getDate();
   const daysPassed = Math.max(1, currentDayNumber);
@@ -627,7 +653,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* أزرار التبويبات المتكاملة */}
+        {/* أزرار التبويبات المتكاملة وتغيير PIN */}
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex bg-slate-200/80 p-1.5 rounded-2xl border border-slate-300 text-sm flex-wrap gap-1">
             <button onClick={() => setActiveTab('pos')} className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 ${activeTab === 'pos' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-700 hover:text-blue-600'}`}>
@@ -657,10 +683,21 @@ export default function App() {
             )}
           </div>
 
+          {/* تبديل الرتبة وتغيير كلمة السر */}
           {role === 'admin' ? (
-            <button onClick={() => setRole('accountant')} className="px-3 py-2 bg-blue-100 text-blue-900 border border-blue-300 rounded-xl text-xs font-bold flex items-center gap-1">
-              <ShieldCheck className="w-4 h-4 text-blue-700" /> المدير
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setShowChangePinModal(true)}
+                className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold flex items-center gap-1"
+                title="تغيير كلمة سر المدير"
+              >
+                <KeyRound className="w-4 h-4 text-blue-600" />
+                <span className="hidden sm:inline">تغيير الرمز</span>
+              </button>
+              <button onClick={() => setRole('accountant')} className="px-3 py-2 bg-blue-100 text-blue-900 border border-blue-300 rounded-xl text-xs font-bold flex items-center gap-1">
+                <ShieldCheck className="w-4 h-4 text-blue-700" /> المدير (تبديل)
+              </button>
+            </div>
           ) : (
             <button onClick={() => setShowPinModal(true)} className="px-3.5 py-2 bg-slate-300 hover:bg-slate-400 text-slate-800 rounded-xl text-xs font-bold flex items-center gap-1">
               <Lock className="w-4 h-4" /> دخول كمدير
@@ -686,7 +723,6 @@ export default function App() {
                   />
                   <Search className="absolute left-3.5 top-4 w-5 h-5 text-blue-500" />
                 </div>
-                {/* أزرار سريعة لإضافة قسم وصنف مباشرة من الكاشير */}
                 <button
                   onClick={() => setIsCategoryModalOpen(true)}
                   className="px-3.5 py-3.5 bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold rounded-2xl flex items-center gap-1.5 text-xs hover:bg-indigo-100 transition whitespace-nowrap shadow-sm"
@@ -1072,7 +1108,7 @@ export default function App() {
           </div>
         )}
 
-        {/* تبويب إدارة المخزون والأصناف والأقسام */}
+        {/* تبويب إدارة المخزون والأصناف */}
         {activeTab === 'devices' && role === 'admin' && (
           <div className="bg-white p-6 rounded-3xl border border-blue-200 space-y-6 shadow-sm">
             <div className="flex flex-wrap justify-between items-center gap-3">
@@ -1143,6 +1179,74 @@ export default function App() {
         )}
       </main>
 
+      {/* نافذة تغيير رمز PIN للمدير */}
+      {showChangePinModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white border-2 border-blue-200 rounded-3xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="flex justify-between items-center mb-4 pb-2 border-b">
+              <h3 className="text-lg font-bold text-blue-950 flex items-center gap-2">
+                <KeyRound className="w-5 h-5 text-blue-600" /> تغيير رمز PIN للمدير
+              </h3>
+              <button onClick={() => setShowChangePinModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+
+            <form onSubmit={handleChangePin} className="space-y-3.5">
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">رمز PIN الحالي *</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="الرمز الحالي..."
+                  value={currentPinInput}
+                  onChange={(e) => setCurrentPinInput(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-center text-slate-900 font-black tracking-widest text-sm focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">رمز PIN الجديد *</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="الرمز الجديد (4 أرقام أو أكثر)..."
+                  value={newPinInput}
+                  onChange={(e) => setNewPinInput(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-center text-slate-900 font-black tracking-widest text-sm focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">تأكيد رمز PIN الجديد *</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="أعد إدخال الرمز الجديد..."
+                  value={confirmNewPinInput}
+                  onChange={(e) => setConfirmNewPinInput(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-center text-slate-900 font-black tracking-widest text-sm focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm shadow-md"
+                >
+                  حفظ الرمز الجديد
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowChangePinModal(false)}
+                  className="px-4 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-sm"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* نافذة إدارة وإضافة الأقسام */}
       {isCategoryModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -1154,12 +1258,11 @@ export default function App() {
               <button onClick={() => setIsCategoryModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
             </div>
 
-            {/* نموذج إضافة قسم */}
             <form onSubmit={handleAddCategory} className="flex gap-2 mb-4">
               <input
                 type="text"
                 required
-                placeholder="اسم القسم الجديد (مثلاً: سماعات بلوتوث)..."
+                placeholder="اسم القسم الجديد (مثلاً: ساعات ذكية)..."
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
                 className="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-slate-900 focus:outline-none focus:border-indigo-500"
@@ -1169,7 +1272,6 @@ export default function App() {
               </button>
             </form>
 
-            {/* قائمة الأقسام الحالية مع خيار الحذف */}
             <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
               {categories.map(cat => (
                 <div key={cat} className="flex justify-between items-center p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold">
@@ -1381,16 +1483,35 @@ export default function App() {
         </div>
       )}
 
-      {/* نافذة PIN */}
+      {/* نافذة التحقق من PIN عند الدخول كمدير */}
       {showPinModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white border border-blue-200 rounded-3xl p-6 w-full max-w-xs shadow-xl text-center">
             <KeyRound className="w-10 h-10 text-blue-600 mx-auto mb-2" />
             <h3 className="text-lg font-bold text-blue-950 mb-1">التحقق من هوية المدير</h3>
-            <input type="password" placeholder="رمز PIN" value={pinInput} onChange={(e) => setPinInput(e.target.value)} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-center text-slate-900 text-lg tracking-widest my-3 font-black" />
+            <input
+              type="password"
+              placeholder="رمز PIN"
+              value={pinInput}
+              onChange={(e) => setPinInput(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-center text-slate-900 text-lg tracking-widest my-3 font-black focus:outline-none focus:border-blue-500"
+            />
             <div className="flex gap-2">
-              <button onClick={() => { if (pinInput === adminPin) { setRole('admin'); setShowPinModal(false); setPinInput(''); } else alert('رمز غير صحيح'); }} className="flex-1 py-2 bg-blue-600 text-white font-bold rounded-xl">تأكيد</button>
-              <button onClick={() => setShowPinModal(false)} className="px-4 py-2 bg-slate-200 font-bold rounded-xl">إلغاء</button>
+              <button
+                onClick={() => {
+                  if (pinInput === adminPin) {
+                    setRole('admin');
+                    setShowPinModal(false);
+                    setPinInput('');
+                  } else {
+                    alert('رمز PIN غير صحيح!');
+                  }
+                }}
+                className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md"
+              >
+                تأكيد
+              </button>
+              <button onClick={() => setShowPinModal(false)} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 font-bold rounded-xl">إلغاء</button>
             </div>
           </div>
         </div>
