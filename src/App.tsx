@@ -5,7 +5,7 @@ import {
   RefreshCw, PhoneCall, MapPin, Store, Edit3, Save, PlusCircle,
   Lock, KeyRound, Receipt, Settings2, Layers, AlertCircle, ArrowUpRight,
   Percent, Key, Wifi, WifiOff, History, Eye, CreditCard, Wallet,
-  Calendar, BookOpen, UserMinus, UserCheck, Sparkles, HelpCircle
+  Calendar, BookOpen, UserMinus, UserCheck, Sparkles, HelpCircle, FolderPlus
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
@@ -127,11 +127,8 @@ export default function App() {
   const [role, setRole] = useState<Role>('admin');
   const [pinInput, setPinInput] = useState('');
   const [showPinModal, setShowPinModal] = useState(false);
-  const [showChangePinModal, setShowChangePinModal] = useState(false);
-  const [oldPinInput, setOldPinInput] = useState('');
-  const [newPinInput, setNewPinInput] = useState('');
 
-  // التبويبات (إضافة تبويب الديون والتنبؤ)
+  // التبويبات
   const [activeTab, setActiveTab] = useState<'pos' | 'sales' | 'debts' | 'devices' | 'categories' | 'expenses' | 'reports' | 'forecast'>('pos');
 
   // فلترة تقارير الأرباح
@@ -142,7 +139,8 @@ export default function App() {
     const saved = localStorage.getItem('qash_categories');
     return saved ? JSON.parse(saved) : ['كفرات آيفون', 'كفرات سامسونج', 'هواتف ذكية', 'شواحن ومحولات', 'سماعات', 'حمايات شاشة'];
   });
-  const [newCatInput, setNewCatInput] = useState('');
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   const [devices, setDevices] = useState<Device[]>(() => {
     const local = localStorage.getItem('qash_devices');
@@ -157,8 +155,22 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem('qash_categories', JSON.stringify(categories));
+  }, [categories]);
+
+  useEffect(() => {
     localStorage.setItem('qash_devices', JSON.stringify(devices));
-  }, [categories, devices]);
+  }, [devices]);
+
+  // إدارة الأصناف (إضافة وتعديل)
+  const [isDeviceModalOpen, setIsDeviceModalOpen] = useState(false);
+  const [editingDevice, setEditingDevice] = useState<Device | null>(null);
+  const [devName, setDevName] = useState('');
+  const [devBarcode, setDevBarcode] = useState('');
+  const [devCategory, setDevCategory] = useState('');
+  const [devCostPrice, setDevCostPrice] = useState('');
+  const [devSalePrice, setDevSalePrice] = useState('');
+  const [devStock, setDevStock] = useState('');
+  const [devCompatibility, setDevCompatibility] = useState('');
 
   // السلة والمبيعات
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -174,12 +186,12 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('الكل');
 
-  // نوافذ الفواتير وتخيير الكاشير
+  // نوافذ الفواتير
   const [completedInvoice, setCompletedInvoice] = useState<SaleRecord | null>(null);
   const [showCheckoutChoiceModal, setShowCheckoutChoiceModal] = useState<boolean>(false);
   const [pendingSaleToFinalize, setPendingSaleToFinalize] = useState<SaleRecord | null>(null);
 
-  // المصاريف (مع التعديل والحذف)
+  // المصاريف
   const [expenses, setExpenses] = useState<ExpenseRecord[]>(() => {
     const local = localStorage.getItem('qash_expenses');
     return local ? JSON.parse(local) : [];
@@ -189,17 +201,6 @@ export default function App() {
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expenseCategory, setExpenseCategory] = useState('نثريات وتغذية');
   const [editingExpense, setEditingExpense] = useState<ExpenseRecord | null>(null);
-
-  // إدارة الأصناف
-  const [isAddDeviceModalOpen, setIsAddDeviceModalOpen] = useState(false);
-  const [newDevName, setNewDevName] = useState('');
-  const [newDevBarcode, setNewDevBarcode] = useState('');
-  const [newDevCategory, setNewDevCategory] = useState('');
-  const [newDevCostPrice, setNewDevCostPrice] = useState('');
-  const [newDevSalePrice, setNewDevSalePrice] = useState('');
-  const [newDevStock, setNewDevStock] = useState('10');
-  const [newDevCompatibility, setNewDevCompatibility] = useState('');
-  const [editingDevice, setEditingDevice] = useState<Device | null>(null);
 
   // المزامنة السحابية للعمليات المعلقة
   const syncPendingData = async () => {
@@ -274,7 +275,7 @@ export default function App() {
       alert(`المتوفر في المخزن ${dev.stock} فقط!`);
       return;
     }
-    setCart(prev => prev.map(i => i.device.id === id ? { ...i, quantity: qty } : item));
+    setCart(prev => prev.map(i => i.device.id === id ? { ...i, quantity: qty } : i));
   };
 
   const subTotalAmount = useMemo(() => cart.reduce((sum, i) => sum + (i.salePrice * i.quantity), 0), [cart]);
@@ -396,14 +397,106 @@ export default function App() {
     }
   };
 
-  // إدارة الخرج والمصروفات (إضافة + تعديل + حذف)
+  // إضافة أو تعديل صنف
+  const handleOpenAddDevice = () => {
+    setEditingDevice(null);
+    setDevName('');
+    setDevBarcode(Date.now().toString().slice(-6));
+    setDevCategory(categories[0] || 'عام');
+    setDevCostPrice('');
+    setDevSalePrice('');
+    setDevStock('10');
+    setDevCompatibility('');
+    setIsDeviceModalOpen(true);
+  };
+
+  const handleOpenEditDevice = (dev: Device) => {
+    setEditingDevice(dev);
+    setDevName(dev.name);
+    setDevBarcode(dev.barcode);
+    setDevCategory(dev.category);
+    setDevCostPrice(String(dev.costPrice));
+    setDevSalePrice(String(dev.salePrice));
+    setDevStock(String(dev.stock));
+    setDevCompatibility(dev.compatibility || '');
+    setIsDeviceModalOpen(true);
+  };
+
+  const handleSaveDevice = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!devName.trim() || !devSalePrice) {
+      alert('يرجى إدخال اسم الصنف وسعر البيع!');
+      return;
+    }
+
+    const saleP = parseFloat(devSalePrice) || 0;
+    const costP = parseFloat(devCostPrice) || 0;
+    const stockP = parseInt(devStock) || 0;
+
+    if (editingDevice) {
+      setDevices(prev => prev.map(d => d.id === editingDevice.id ? {
+        ...d,
+        name: devName.trim(),
+        barcode: devBarcode.trim() || d.barcode,
+        category: devCategory,
+        costPrice: costP,
+        salePrice: saleP,
+        stock: stockP,
+        compatibility: devCompatibility.trim()
+      } : d));
+      alert('تم تعديل بيانات الصنف بنجاح!');
+    } else {
+      const newDev: Device = {
+        id: `dev-${Date.now()}`,
+        name: devName.trim(),
+        barcode: devBarcode.trim() || Date.now().toString().slice(-6),
+        category: devCategory || categories[0] || 'عام',
+        costPrice: costP,
+        salePrice: saleP,
+        stock: stockP,
+        compatibility: devCompatibility.trim()
+      };
+      setDevices(prev => [newDev, ...prev]);
+      alert('تمت إضافة الصنف الجديد بنجاح!');
+    }
+    setIsDeviceModalOpen(false);
+  };
+
+  const handleDeleteDevice = (id: string) => {
+    if (confirm('هل أنت متأكد من حذف هذا الصنف من المخزن؟')) {
+      setDevices(prev => prev.filter(d => d.id !== id));
+      alert('تم حذف الصنف.');
+    }
+  };
+
+  // إدارة الأقسام
+  const handleAddCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) return;
+    if (categories.includes(trimmed)) {
+      alert('هذا القسم موجود مسبقاً!');
+      return;
+    }
+    setCategories(prev => [...prev, trimmed]);
+    setNewCategoryName('');
+    alert(`تمت إضافة قسم (${trimmed}) بنجاح!`);
+  };
+
+  const handleDeleteCategory = (catName: string) => {
+    if (confirm(`هل أنت متأكد من حذف قسم (${catName})؟ لن يتم حذف الأصناف التابعة له.`)) {
+      setCategories(prev => prev.filter(c => c !== catName));
+      if (selectedCategory === catName) setSelectedCategory('الكل');
+    }
+  };
+
+  // إدارة الخرج والمصروفات
   const handleSaveExpense = (e: React.FormEvent) => {
     e.preventDefault();
     const amountNum = Number(expenseAmount);
     if (!expenseTitle.trim() || isNaN(amountNum) || amountNum <= 0) return;
 
     if (editingExpense) {
-      // تعديل
       const updated = expenses.map(exp => exp.id === editingExpense.id ? {
         ...exp,
         title: expenseTitle.trim(),
@@ -414,7 +507,6 @@ export default function App() {
       localStorage.setItem('qash_expenses', JSON.stringify(updated));
       alert('تم تعديل حركة الخرج بنجاح!');
     } else {
-      // إضافة جديدة
       const newExp: ExpenseRecord = {
         id: `exp-${Date.now()}`,
         title: expenseTitle.trim(),
@@ -458,7 +550,7 @@ export default function App() {
   };
 
   // فلترة تقارير الأرباح
-  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+  const currentMonth = new Date().toISOString().slice(0, 7);
   const todayDate = new Date().toISOString().split('T')[0];
 
   const filteredSalesForReports = useMemo(() => {
@@ -478,7 +570,7 @@ export default function App() {
   const reportTotalExpenses = filteredExpensesForReports.reduce((sum, e) => sum + e.amount, 0);
   const reportNetCleanProfit = reportTotalProfit - reportTotalExpenses;
 
-  // خوارزمية التنبؤ الذكي بالمبيعات لنهاية الشهر
+  // خوارزمية التنبؤ بالمبيعات
   const daysInCurrentMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
   const currentDayNumber = new Date().getDate();
   const daysPassed = Math.max(1, currentDayNumber);
@@ -524,7 +616,7 @@ export default function App() {
               ) : (
                 <span className="text-[11px] bg-amber-50 text-amber-700 border border-amber-300 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
                   <WifiOff className="w-3 h-3 text-amber-600" />
-                  أوفلاين
+                  أوفلاين (محلي)
                 </span>
               )}
             </div>
@@ -553,7 +645,7 @@ export default function App() {
             {role === 'admin' && (
               <>
                 <button onClick={() => setActiveTab('devices')} className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 ${activeTab === 'devices' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-700 hover:text-blue-600'}`}>
-                  <Package className="w-4 h-4" /> المخزون
+                  <Package className="w-4 h-4" /> المخزون والأصناف
                 </button>
                 <button onClick={() => setActiveTab('reports')} className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 ${activeTab === 'reports' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-700 hover:text-blue-600'}`}>
                   <TrendingUp className="w-4 h-4" /> تقرير الأرباح
@@ -583,19 +675,34 @@ export default function App() {
         {activeTab === 'pos' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             <div className="lg:col-span-2 flex flex-col gap-4">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="ابحث باسم الغلاف، الهاتف، أو امسح الباركود..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-white border border-blue-200 rounded-2xl px-4 py-3.5 pl-10 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 shadow-sm"
-                />
-                <Search className="absolute left-3.5 top-4 w-5 h-5 text-blue-500" />
+              <div className="flex gap-2 items-center">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    placeholder="ابحث باسم الغلاف، الهاتف، أو امسح الباركود..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-white border border-blue-200 rounded-2xl px-4 py-3.5 pl-10 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 shadow-sm"
+                  />
+                  <Search className="absolute left-3.5 top-4 w-5 h-5 text-blue-500" />
+                </div>
+                {/* أزرار سريعة لإضافة قسم وصنف مباشرة من الكاشير */}
+                <button
+                  onClick={() => setIsCategoryModalOpen(true)}
+                  className="px-3.5 py-3.5 bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold rounded-2xl flex items-center gap-1.5 text-xs hover:bg-indigo-100 transition whitespace-nowrap shadow-sm"
+                >
+                  <FolderPlus className="w-4 h-4" /> + قسم
+                </button>
+                <button
+                  onClick={handleOpenAddDevice}
+                  className="px-4 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl flex items-center gap-1.5 text-xs transition whitespace-nowrap shadow-sm"
+                >
+                  <Plus className="w-4 h-4" /> + صنف جديد
+                </button>
               </div>
 
               {/* أزرار الأقسام */}
-              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none items-center">
                 {['الكل', ...categories].map(cat => (
                   <button key={cat} onClick={() => setSelectedCategory(cat)} className={`px-4 py-2 rounded-xl text-xs whitespace-nowrap font-bold transition ${selectedCategory === cat ? 'bg-blue-600 text-white shadow-sm' : 'bg-white border border-blue-200 text-slate-700 hover:bg-blue-50'}`}>
                     {cat}
@@ -623,7 +730,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* سلة البيع مع تحديد طريقة الدفع ونظام الدين */}
+            {/* سلة البيع */}
             <div className="bg-white border-2 border-blue-100 rounded-3xl p-5 flex flex-col justify-between shadow-sm">
               <div>
                 <div className="flex items-center justify-between border-b border-blue-100 pb-3 mb-4">
@@ -652,7 +759,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* طرق الدفع مع خيار الآجل (الدين) */}
+              {/* تفاصيل الدفع */}
               <div className="border-t border-slate-100 pt-3 mt-3 space-y-2.5">
                 <div>
                   <label className="text-xs font-bold text-slate-700 block mb-1 flex items-center gap-1">
@@ -710,7 +817,7 @@ export default function App() {
           </div>
         )}
 
-        {/* تبويب دفتر الديون (بيع آجل) */}
+        {/* تبويب دفتر الديون */}
         {activeTab === 'debts' && (
           <div className="space-y-4">
             <div className="bg-white p-5 rounded-2xl border border-blue-200 shadow-sm flex justify-between items-center flex-wrap gap-4">
@@ -774,7 +881,7 @@ export default function App() {
           </div>
         )}
 
-        {/* تبويب تقارير الأرباح المتقدمة (يومي / شهري) */}
+        {/* تبويب تقارير الأرباح */}
         {activeTab === 'reports' && role === 'admin' && (
           <div className="space-y-6">
             <div className="bg-white p-5 rounded-2xl border border-blue-200 shadow-sm flex justify-between items-center flex-wrap gap-4">
@@ -810,7 +917,7 @@ export default function App() {
           </div>
         )}
 
-        {/* تبويب التنبؤ الذكي بالمبيعات (AI Sales Forecast) */}
+        {/* تبويب التنبؤ الذكي بالمبيعات */}
         {activeTab === 'forecast' && role === 'admin' && (
           <div className="space-y-6">
             <div className="bg-gradient-to-r from-indigo-900 to-blue-900 text-white p-6 rounded-3xl shadow-xl">
@@ -857,7 +964,7 @@ export default function App() {
           </div>
         )}
 
-        {/* تبويب الخرج اليومي (مع التعديل والحذف) */}
+        {/* تبويب الخرج اليومي */}
         {activeTab === 'expenses' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center bg-white p-5 rounded-2xl border border-blue-200 shadow-sm">
@@ -926,7 +1033,7 @@ export default function App() {
           </div>
         )}
 
-        {/* باقي التبويبات (المبيعات والمخزون) كما هي مع التنسيق الجديد */}
+        {/* تبويب الفواتير */}
         {activeTab === 'sales' && (
           <div className="space-y-4">
             <div className="bg-white border border-blue-200 rounded-3xl overflow-hidden shadow-sm">
@@ -965,31 +1072,68 @@ export default function App() {
           </div>
         )}
 
+        {/* تبويب إدارة المخزون والأصناف والأقسام */}
         {activeTab === 'devices' && role === 'admin' && (
-          <div className="bg-white p-6 rounded-3xl border border-blue-200 space-y-5 shadow-sm">
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-bold text-blue-950">إدارة المخزون والكميات</h2>
-              <button onClick={() => setIsAddDeviceModalOpen(true)} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold flex items-center gap-2">
-                <Plus className="w-4 h-4" /> إضافة صنف جديد
-              </button>
+          <div className="bg-white p-6 rounded-3xl border border-blue-200 space-y-6 shadow-sm">
+            <div className="flex flex-wrap justify-between items-center gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-blue-950">إدارة المخزون والأصناف</h2>
+                <p className="text-xs text-slate-500">إضافة وتعديل وحذف الأصناف والتحكم بالأقسام</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setIsCategoryModalOpen(true)}
+                  className="px-4 py-2.5 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 rounded-xl text-sm font-bold flex items-center gap-2"
+                >
+                  <FolderPlus className="w-4 h-4" /> إدارة الأقسام
+                </button>
+                <button
+                  onClick={handleOpenAddDevice}
+                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm"
+                >
+                  <Plus className="w-4 h-4" /> إضافة صنف جديد
+                </button>
+              </div>
             </div>
+
             <div className="overflow-x-auto">
               <table className="w-full text-right text-sm">
                 <thead className="bg-blue-50/70 text-blue-900 border-b border-blue-100">
                   <tr>
                     <th className="p-3.5 font-bold">اسم الصنف</th>
+                    <th className="p-3.5 font-bold">القسم</th>
                     <th className="p-3.5 font-bold">سعر البيع</th>
                     <th className="p-3.5 font-bold">التكلفة</th>
                     <th className="p-3.5 font-bold">المتبقي</th>
+                    <th className="p-3.5 text-center font-bold">الإجراءات</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {devices.map(dev => (
-                    <tr key={dev.id}>
+                    <tr key={dev.id} className="hover:bg-blue-50/30">
                       <td className="p-3.5 font-bold text-slate-900">{dev.name}</td>
-                      <td className="p-3.5 font-black text-blue-600">{dev.salePrice.toLocaleString()}</td>
-                      <td className="p-3.5 text-slate-500">{dev.costPrice.toLocaleString()}</td>
+                      <td className="p-3.5 text-xs text-slate-500"><span className="bg-slate-100 px-2 py-0.5 rounded-md font-bold">{dev.category}</span></td>
+                      <td className="p-3.5 font-black text-blue-600">{dev.salePrice.toLocaleString()} {STORE_INFO.currency}</td>
+                      <td className="p-3.5 text-slate-500">{dev.costPrice.toLocaleString()} {STORE_INFO.currency}</td>
                       <td className="p-3.5 font-bold text-emerald-700">{dev.stock} قطعة</td>
+                      <td className="p-3.5 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleOpenEditDevice(dev)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
+                            title="تعديل الصنف"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteDevice(dev.id)}
+                            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg"
+                            title="حذف الصنف"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -998,6 +1142,170 @@ export default function App() {
           </div>
         )}
       </main>
+
+      {/* نافذة إدارة وإضافة الأقسام */}
+      {isCategoryModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white border-2 border-blue-200 rounded-3xl p-6 w-full max-w-md shadow-2xl">
+            <div className="flex justify-between items-center mb-4 pb-2 border-b">
+              <h3 className="text-lg font-bold text-blue-950 flex items-center gap-2">
+                <FolderPlus className="w-5 h-5 text-indigo-600" /> إدارة أقسام المتجر
+              </h3>
+              <button onClick={() => setIsCategoryModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+
+            {/* نموذج إضافة قسم */}
+            <form onSubmit={handleAddCategory} className="flex gap-2 mb-4">
+              <input
+                type="text"
+                required
+                placeholder="اسم القسم الجديد (مثلاً: سماعات بلوتوث)..."
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                className="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-slate-900 focus:outline-none focus:border-indigo-500"
+              />
+              <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center gap-1 shadow-sm">
+                <Plus className="w-4 h-4" /> إضافة
+              </button>
+            </form>
+
+            {/* قائمة الأقسام الحالية مع خيار الحذف */}
+            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+              {categories.map(cat => (
+                <div key={cat} className="flex justify-between items-center p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold">
+                  <span className="text-slate-800">{cat}</span>
+                  <button
+                    onClick={() => handleDeleteCategory(cat)}
+                    className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg"
+                    title="حذف هذا القسم"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setIsCategoryModalOpen(false)}
+              className="w-full mt-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-sm"
+            >
+              تم وإغلاق
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* نافذة إضافة أو تعديل صنف */}
+      {isDeviceModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white border-2 border-blue-200 rounded-3xl p-6 w-full max-w-lg shadow-2xl">
+            <div className="flex justify-between items-center mb-4 pb-2 border-b">
+              <h3 className="text-lg font-bold text-blue-950 flex items-center gap-2">
+                <Package className="w-5 h-5 text-blue-600" />
+                {editingDevice ? 'تعديل بيانات الصنف' : 'إضافة صنف جديد للمخزن'}
+              </h3>
+              <button onClick={() => setIsDeviceModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+
+            <form onSubmit={handleSaveDevice} className="space-y-3.5">
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">اسم الصنف أو السلعة *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="مثال: شاحن أنكر 20W أصلي"
+                  value={devName}
+                  onChange={(e) => setDevName(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm font-bold text-slate-900 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">القسم / التصنيف *</label>
+                  <select
+                    value={devCategory}
+                    onChange={(e) => setDevCategory(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm font-bold text-slate-900 focus:outline-none focus:border-blue-500"
+                  >
+                    {categories.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">الباركود (أو رقم الصنف)</label>
+                  <input
+                    type="text"
+                    value={devBarcode}
+                    onChange={(e) => setDevBarcode(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm font-mono font-bold text-slate-900 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">سعر البيع ({STORE_INFO.currency}) *</label>
+                  <input
+                    type="number"
+                    required
+                    value={devSalePrice}
+                    onChange={(e) => setDevSalePrice(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm font-bold text-blue-600 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">سعر التكلفة ({STORE_INFO.currency})</label>
+                  <input
+                    type="number"
+                    value={devCostPrice}
+                    onChange={(e) => setDevCostPrice(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm font-bold text-slate-700 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">الكمية بالمخزن *</label>
+                  <input
+                    type="number"
+                    required
+                    value={devStock}
+                    onChange={(e) => setDevStock(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm font-bold text-emerald-700 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">التوافق / ملاحظات إضافية (اختياري)</label>
+                <input
+                  type="text"
+                  placeholder="مثال: Type-C, iPhone 15, سامسونج"
+                  value={devCompatibility}
+                  onChange={(e) => setDevCompatibility(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-3">
+                <button
+                  type="submit"
+                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm shadow-md"
+                >
+                  {editingDevice ? 'حفظ التعديلات' : 'إضافة الصنف'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsDeviceModalOpen(false)}
+                  className="px-5 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-sm"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* نافذة خيار الطباعة أو الحفظ بدون طباعة */}
       {showCheckoutChoiceModal && pendingSaleToFinalize && (
